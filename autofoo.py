@@ -27,7 +27,6 @@ urls = "https://rapidmoviez.cr/feed/s"
 
 feed = feedparser.parse(urls)
 delta = (datetime.now() - timedelta(hours=12)).replace(tzinfo=timezone.utc)
-delta = (datetime.now() - timedelta(days=1)).replace(tzinfo=timezone.utc)
 
 def load_page(url):
     
