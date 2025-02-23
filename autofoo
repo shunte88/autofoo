@@ -1,0 +1,4 @@
+source  /home/stuart/.config/postinsta
+cd /data2/autofoo
+source .venv/bin/activate
+python3 autofoo.py >> /tmp/autofoo.log 2>&1
