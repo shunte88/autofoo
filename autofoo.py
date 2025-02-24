@@ -12,7 +12,7 @@ from selenium.webdriver.support import expected_conditions as EC
 
 sys.path.append(str(Path(__file__).resolve().parent / 'src'))
 
-upo = os.Getenv("NTFLR_USERNAME")
+upo = os.getenv("NTFLR_USERNAME")
 if not upo:
     print("NTFLR_USERNAME not set")
     sys.exit(1)
