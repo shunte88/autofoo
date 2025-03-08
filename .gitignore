@@ -3,3 +3,6 @@ chrome_profile
 *.txt
 __pycache__
 .venv
+logs
+bc*
+band*
