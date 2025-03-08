@@ -50,7 +50,7 @@ process = []
 
 # Iterate through entries and filter by the time and keyword
 # further filter by shows of interest
-logging.info(f'Evaluating {len(feed.entries)}')
+logging.info(f'Evaluating {len(feed.entries)} potential shows')
 for entry in feed.entries:
     if '1080P' in entry.title.upper():
         entry_date = datetime.strptime(entry.published, "%a, %d %b %Y %H:%M:%S %z")
