@@ -80,12 +80,12 @@ class SceneDownload():
     def _init_logging(self, **kwargs):
         self.ensure_log_dir()
         self.logger = logging.getLogger(__name__)
-        logging.basicConfig(\
-            level = logging.INFO,\
-            handlers = [\
-                logging.Formatter('%(asctime)s:%(levelname)s:%(name)s - %(message)s'),\
-                logging.FileHandler(os.path.join(self.log_dir, f'autofoo_log_{self._get_timestamp()}.log')),\
-                logging.StreamHandler(sys.stdout)\
+        logging.basicConfig(
+            level = logging.INFO,
+            format = '%(asctime)s:%(levelname)s:%(name)s - %(message)s',
+            handlers = [
+                logging.FileHandler(os.path.join(self.log_dir, f'autofoo_log_{self._get_timestamp()}.log')),
+                logging.StreamHandler(sys.stdout)
             ])
         # Set the formatter for the handler
         logging.info(f'Setting log directory at {self.log_dir}')
