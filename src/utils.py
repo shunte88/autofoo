@@ -82,7 +82,7 @@ class SceneDownload():
         self.logger = logging.getLogger(__name__)
         logging.basicConfig(
             level = logging.INFO,
-            format = '%(asctime)s:%(levelname)s:%(name)s - %(message)s',
+            format = '%(asctime)s:%(levelname)s:%(name)s:%(message)s',
             handlers = [
                 logging.FileHandler(os.path.join(self.log_dir, f'autofoo_log_{self._get_timestamp()}.log')),
                 logging.StreamHandler(sys.stdout)
