@@ -1,6 +1,7 @@
 import sys
 import os
 import re
+import logging
 import feedparser
 from datetime import datetime, timedelta, timezone
 from src.utils import SceneDownload
@@ -49,6 +50,7 @@ process = []
 
 # Iterate through entries and filter by the time and keyword
 # further filter by shows of interest
+logging.info(f'Evaluating {len(feed.entries)}')
 for entry in feed.entries:
     if '1080P' in entry.title.upper():
         entry_date = datetime.strptime(entry.published, "%a, %d %b %Y %H:%M:%S %z")
@@ -60,6 +62,7 @@ for entry in feed.entries:
             and sdx.not_seen(test):
             sdx.add_seen_show(test) # no repeat downloads!!!!
             entry['test'] = test
+            logging.info(f'Adding {test} for further processing...')
             process.append(entry)
 
 nlx = []
