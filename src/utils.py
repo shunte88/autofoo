@@ -114,7 +114,7 @@ class SceneDownload():
             os.makedirs(self.log_dir)
 
     def _get_timestamp(self):
-        return datetime.now().strftime("%Y_%m_%d_%I_%M_%S")
+        return datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
 
     def season_episode_regex(self):
         return self.season_episode_regex
