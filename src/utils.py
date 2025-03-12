@@ -2,6 +2,7 @@
 import os
 import sys
 import logging
+import time
 from datetime import datetime
 import requests
 import asyncio
@@ -15,46 +16,28 @@ from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from fake_useragent import UserAgent
 
 
-# Constants
-NTFURL_API = "https://nitroflare.com/api/v2"
-NTFURL_KEYINFO = f"{NTFURL_API}/getKeyInfo"
-NTFURL_FILEINFO = f"{NTFURL_API}/getFileInfo"
-NTFURL_DOWNLOADLINK = f"{NTFURL_API}/getDownloadLink"
-FILETYPES = ['avi', 'mkv', 'mpeg', 'mp4', 'm4v', 'mpg', 'webm', 'avif', 'ts']
+class SceneDownload:
 
-# List of special case words that should stay uppercase
-SPECIAL_CASES = {
-    "USA", "FBI", "BBC",
-    "US", "AU", "PL", "IE", "NZ", "FR", "DE", "JP", "UK",
-    "QI", "XL", "SAS", "RAF",
-    "WWII", "WPC",
-    "VI", "VII", "VIII", "VIIII", "IX", "II", "III", "IV",
-    "DCI", "HD", "W1A", "HBO", "100K",
-}
+    # Constants
+    NTFURL_API = "https://nitroflare.com/api/v2"
+    NTFURL_KEYINFO = f"{NTFURL_API}/getKeyInfo"
+    NTFURL_FILEINFO = f"{NTFURL_API}/getFileInfo"
+    NTFURL_DOWNLOADLINK = f"{NTFURL_API}/getDownloadLink"
 
-# Load garbage words from file
-def load_garbage_words(filepath):
-    """
-    Load ripper/scene garbage words from a file.
-    """
-    with open(filepath, "r", encoding="utf-8") as f:
-        return set(line.strip().lower() for line in f if line.strip())
+    # List of special case words that should stay uppercase
+    SPECIAL_CASES = {
+        "USA", "FBI", "BBC",
+        "US", "AU", "PL", "IE", "NZ", "FR", "DE", "JP", "UK",
+        "QI", "XL",
+        "WWII", "WPC",
+        "VI", "VII", "VIII", "VIIII", "IX", "II", "III", "IV",
+        "DCI", "HD", "W1A", "HBO", "100K",
+    }
 
-GARBAGE_WORDS = load_garbage_words("/data/tvtitle_munge.txt")
-
-# List of special case words that should stay uppercase
-SPECIAL_CASES = {
-    "USA", "FBI", "BBC",
-    "US", "AU", "PL", "IE", "NZ", "FR", "DE", "JP", "UK",
-    "QI", "XL",
-    "WWII", "WPC",
-    "VI", "VII", "VIII", "VIIII", "IX", "II", "III", "IV",
-    "DCI", "HD", "W1A", "HBO", "100K",
-}
-
-class SceneDownload():
+    FILETYPES = ['avi', 'mkv', 'mpeg', 'mp4', 'm4v', 'mpg', 'webm', 'avif', 'ts']
 
     def __init__(self, **kwargs):
         self.season_episode_regex = r"(.*?)(S\d{2,3}E\d{2})"
@@ -95,19 +78,48 @@ class SceneDownload():
 
     def __del__(self):
         self.close()
+        logging.info(f'Goodbye from {str(type(self)).replace("<class '", '').replace("'>",'')}')
 
     def close(self):
         if self.driver:
             try:
+                logging.info('Cleanup Chrome')
                 self.driver.quit()
                 self.driver = None
             except:
-                None
+                pass
         
     def set_params(self, **kwargs):
         self.download_dir = kwargs.get('download_dir', self.download_dir)
         self.uxs = kwargs.get('uxs', self.uxs)
         self.pxs = kwargs.get('pxs', self.pxs)
+        
+    # Load garbage words from file
+    def load_garbage_words(self, filepath='/data/tvtitle_munge.txt'):
+        """
+        Load ripper/scene garbage words from a file.
+        """
+        with open(filepath, "r", encoding="utf-8") as f:
+            self.GARBAGE_WORDS = set(line.strip().lower() for line in f if line.strip())
+
+    def setup_request_session(self):
+        # Create a Requests session
+        self.session = requests.Session()
+        # Get cookies from Selenium and add them to Requests session
+        for cookie in self.driver.get_cookies():
+            self.session.cookies.set(cookie['name'], cookie['value'], domain=cookie['domain'])
+
+    def get_first_links(self, url) -> dict:
+        # Use the Requests session to make requests with the transferred cookies
+        response = self.session.get(url)
+        print(response.content)
+        return {}
+        # Extract href attributes containing "1080p"
+        for link in links:
+            href = link.get_attribute('href')
+            if href and "1080p" in href:
+                print(href)
+        return links
 
     def ensure_log_dir(self):
         if not os.path.exists(self.log_dir):
@@ -174,9 +186,9 @@ class SceneDownload():
         title_tokens = re.split(r"[._\s]+", episode_title_raw.strip())
         filtered_tokens = []
         for token in title_tokens:
-            if token.upper() in GARBAGE_WORDS:
+            if token.upper() in self.GARBAGE_WORDS:
                 break  # Stop at first garbage word
-            if token.lower() in FILETYPES:
+            if token.lower() in self.FILETYPES:
                 break
             filtered_tokens.append(token)
 
@@ -184,7 +196,7 @@ class SceneDownload():
         episode_title = ""
         if filtered_tokens:
             formatted_title_tokens = [
-                word.upper() if word.upper() in SPECIAL_CASES else word.capitalize()
+                word.upper() if word.upper() in self.SPECIAL_CASES else word.capitalize()
                 for word in filtered_tokens
             ]
             episode_title = "." + ".".join(formatted_title_tokens).strip(".")
@@ -192,7 +204,7 @@ class SceneDownload():
         # Process show name
         show_tokens = re.split(r"[._\s]+", show_raw.strip())
         formatted_show_tokens = [
-            word.upper() if word.upper() in SPECIAL_CASES else word.capitalize()
+            word.upper() if word.upper() in self.SPECIAL_CASES else word.capitalize()
             for word in show_tokens
         ]
         show_name = ".".join(formatted_show_tokens).strip(".")
@@ -211,26 +223,6 @@ class SceneDownload():
         clean_filename = clean_filename.replace('..','.')
         return folder, clean_filename
 
-
-    def test_files(self):
-        test_filenames = [
-            "DUPAHIYA.S01.1080p.hdtv.mkv",
-            "breaking.bad.s02e05.1080p.bluray.x264.mkv",
-            "game.of.thrones.s05e09.720p.hdtv.x264.mkv",
-            "prime.suspect.s03e02.720p.hdtv.x264.mkv",
-            "stranger.things.s03e01.webrip.hevc.x265.mkv",
-            "HIGH_POTENTIAL_s02e12_webrip_hevc_x265.mkv",
-            "have.I.got.news.for.you.US.s01e03.webrip.hevc.x265.mkv",
-            "high.potential.s01e13.lets.play.1080p.web.dl.hevc.x265.rmteam.mkv",
-            "prime.target.s01e05.house.of.1080p.web.dl.hevc.x265.rmteam.mkv"
-        ]
-
-        for test in test_filenames:
-            logging.info(f"IN .....: {test}")
-            path_, name_ = self.clean_filename(test)
-            logging.info(f"OUT ....: {path_}/{name_}")
-            logging.info(f"Test ...: {self.sanitize_show(test)}\n")
-
     def seen_shows(self):
         return self.seen_files
 
@@ -241,7 +233,7 @@ class SceneDownload():
             if match:
                 return ''.join(match.groups())
         except:
-            None
+            pass
         return test
     
     def add_seen_show(self, data):
@@ -310,6 +302,9 @@ class SceneDownload():
     def not_seen(self, test):
         return not test in self.seen_shows()
 
+    def nf_premium(self) -> dict:
+        return {"user": self.uxs, "premiumKey": self.pxs}
+
     def ensure_chrome_profile(self):
         if not os.path.exists(self.profile_dir):
             os.makedirs(self.profile_dir)
@@ -322,12 +317,13 @@ class SceneDownload():
         options = webdriver.ChromeOptions()
         options.add_argument("--start-minimized")
         options.add_argument("--headless")
+        #options.add_argument("--start-maximized")
         options.add_argument("--no-sandbox")
         options.add_argument("--disable-dev-shm-usage")
         options.add_argument("--ignore-certificate-errors")
         options.add_argument("--disable-extensions")
         options.add_argument("--disable-gpu")
-        options.add_argument("window-size=200x600")
+        options.add_argument("window-size=1920x1080")
         options.add_argument("--disable-background-timer-throttling")
         options.add_argument("--disable-backgrounding-occluded-windows")
         options.add_argument("--disable-translate")
@@ -339,6 +335,7 @@ class SceneDownload():
         options.add_argument("--disable-plugins")
         options.add_argument("--disable-animations")
         options.add_argument("--disable-cache")
+        options.add_argument(f"user-agent={UserAgent().random}")
         options.add_experimental_option("excludeSwitches", ["enable-automation", "enable-logging"])
 
         prefs = {
@@ -364,6 +361,7 @@ class SceneDownload():
             options = chrome_options
             service = ChromeService(ChromeDriverManager().install())
             self.driver = webdriver.Chrome(service=service, options=options)
+            self.setup_request_session()
             return self.driver
         except Exception as e:
             logging.critical(f"Failed to initialize browser: {str(e)}")
@@ -372,9 +370,8 @@ class SceneDownload():
     def download_files(self, files):
 
         auri = []
-        logging.info(f'we have {len(files)} file(s) to process')
-        params = {"user": self.uxs, "premiumKey": self.pxs}
-        response = requests.get(url=NTFURL_KEYINFO, params=params)
+        logging.info(f'We have {len(files)} file(s) to process')
+        response = requests.get(url=self.NTFURL_KEYINFO, params=self.nf_premium())
         if response.status_code == 200:
             j = response.json()
             if files:
@@ -384,14 +381,19 @@ class SceneDownload():
                             if uri:
                                 _file_id = uri.split("/")[4]
                                 params = {"files": _file_id}
-                                response = requests.get(url=NTFURL_FILEINFO, params=params)
+                                response = requests.get(url=self.NTFURL_FILEINFO, params=params)
                                 if response.status_code == 200:
                                     j = response.json()
-                                    params = {"user": self.uxs, "premiumKey": self.pxs, "file": _file_id}
-                                    response = requests.get(url=NTFURL_DOWNLOADLINK, params=params)
+                                    params = self.nf_premium() 
+                                    params['file'] = _file_id
+                                    response = requests.get(url=self.NTFURL_DOWNLOADLINK, params=params)
                                     if response.status_code == 200:
                                         j = response.json()
-                                        test = f'''{j["result"]["name"].split('1080')[0].strip()}{j["result"]["name"].split('.')[-1]}'''
+                                        if '1080' in j["result"]["name"]:
+                                            splitstr = '1080'
+                                        elif '720' in j["result"]["name"]:
+                                            splitstr = '720'
+                                        test = f'''{j["result"]["name"].split(splitstr)[0].strip()}{j["result"]["name"].split('.')[-1]}'''
                                         _, show_filename = self.clean_filename(test)
                                         auri.append((
                                             j["result"]["url"],
@@ -406,6 +408,25 @@ class SceneDownload():
                         logging.info('>',t,f)
         if auri:
             asyncio.run(self.go_download(auri))
+
+    def test_files(self):
+        test_filenames = [
+            "DUPAHIYA.S01.1080p.hdtv.mkv",
+            "breaking.bad.s02e05.1080p.bluray.x264.mkv",
+            "game.of.thrones.s05e09.720p.hdtv.x264.mkv",
+            "prime.suspect.s03e02.720p.hdtv.x264.mkv",
+            "stranger.things.s03e01.webrip.hevc.x265.mkv",
+            "HIGH_POTENTIAL_s02e12_webrip_hevc_x265.mkv",
+            "have.I.got.news.for.you.US.s01e03.webrip.hevc.x265.mkv",
+            "high.potential.s01e13.lets.play.1080p.web.dl.hevc.x265.rmteam.mkv",
+            "prime.target.s01e05.house.of.1080p.web.dl.hevc.x265.rmteam.mkv"
+        ]
+
+        for test in test_filenames:
+            logging.info(f"IN .....: {test}")
+            path_, name_ = self.clean_filename(test)
+            logging.info(f"OUT ....: {path_}/{name_}")
+            logging.info(f"Test ...: {self.sanitize_show(test)}\n")
 
 #sdf=SceneDownload()
 #sdf.test_files()
