@@ -56,6 +56,7 @@ class SceneDownload:
         self.uxs = kwargs.get('uxs', None)
         self.pxs = kwargs.get('pxs', None)
         self.logging_verbose = kwargs.get('logging_verbose', False)
+        self.scene_tags = []
         self._init_logging()
         self.load_seen_files()
         self.init_browser(self.chrome_browser_options())
@@ -95,12 +96,12 @@ class SceneDownload:
         self.pxs = kwargs.get('pxs', self.pxs)
         
     # Load garbage words from file
-    def load_garbage_words(self, filepath='/data/tvtitle_munge.txt'):
+    def load_scene_tags(self, filepath='/data/tvtitle_munge.txt'):
         """
         Load ripper/scene garbage words from a file.
         """
         with open(filepath, "r", encoding="utf-8") as f:
-            self.GARBAGE_WORDS = set(line.strip().lower() for line in f if line.strip())
+            self.scene_tags = set(line.strip().lower() for line in f if line.strip())
 
     def setup_request_session(self):
         # Create a Requests session
@@ -186,7 +187,7 @@ class SceneDownload:
         title_tokens = re.split(r"[._\s]+", episode_title_raw.strip())
         filtered_tokens = []
         for token in title_tokens:
-            if token.upper() in self.GARBAGE_WORDS:
+            if token.upper() in self.scene_tags:
                 break  # Stop at first garbage word
             if token.lower() in self.FILETYPES:
                 break
