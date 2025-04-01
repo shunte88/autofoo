@@ -85,8 +85,9 @@ for uri in urls:
             entry_date = datetime.strptime(entry.published, "%a, %d %b %Y %H:%M:%S %z")
             test = entry.title.upper().split('1080P')[0].strip().split(']')[-1].strip()
             test = sdx.sanitize_show(test)
-            if entry_date >= delta \
-                and can_process(entry.title) \
+            """if entry_date >= delta \
+                and"""
+            if can_process(entry.title) \
                 and go_show(entry.title) \
                 and sdx.not_seen(test):
                 sdx.add_seen_show(test) # no repeat downloads!!!!
@@ -94,12 +95,12 @@ for uri in urls:
                 logging.info(f'Adding {test} for further processing...')
                 process.append(entry)
 
-    nlx = []
-    for show in sorted(process, \
-        key=lambda x: datetime.strptime(x.published, "%a, %d %b %Y %H:%M:%S %z").timestamp()):
-        nlx.append((sdx.load_page(show.link), show.test))
+nlx = []
+for show in sorted(process, \
+    key=lambda x: datetime.strptime(x.published, "%a, %d %b %Y %H:%M:%S %z").timestamp()):
+    nlx.append((sdx.load_page(show.link), show.test))
 
-#nlx.append((sdx.load_page('https://rapidmoviez.cr/release/mythic-quest-ravens-banquet-s01-720p-webrip-2ch-x265-hevc-psa'), 'Mythic.Quest.S00E00'))
+#nlx.append((sdx.load_page('https://rapidmoviez.cr/release/severance-s02-1080p-10bit-webrip-6ch-x265-hevc-psa'), 'Severance.S02E00'))
 
 sdx.close()
 sdx.download_files(nlx)

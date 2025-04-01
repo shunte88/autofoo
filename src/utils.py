@@ -29,7 +29,7 @@ class SceneDownload:
 
     # List of special case words that should stay uppercase
     SPECIAL_CASES = {
-        "USA", "FBI", "BBC",
+        "USA", "FBI", "BBC", "CSI", "WILTY",
         "US", "AU", "PL", "IE", "NZ", "FR", "DE", "JP", "UK",
         "QI", "XL",
         "WWII", "WPC",
@@ -37,7 +37,8 @@ class SceneDownload:
         "DCI", "HD", "W1A", "HBO", "100K",
     }
 
-    FILETYPES = ['avi', 'mkv', 'mpeg', 'mp4', 'm4v', 'mpg', 'webm', 'avif', 'ts']
+    # don't expect anything other than mkv, webm, and mp4 in 2025
+    FILETYPES = ['mkv', 'mpeg', 'mp4', 'm4v', 'mpg', 'webm', 'avif', 'ts']
 
     def __init__(self, **kwargs):
         self.season_episode_regex = r"(.*?)(S\d{2,3}E\d{2})"
@@ -403,10 +404,10 @@ class SceneDownload:
                                         ))
                             else:
                                 logging.warning('uri exposed as NULL')
-                                logging.info('>>',t,f)
+                                logging.info(f'>> {t}, {f}')
                     else:
                         logging.warning('files exposed as NULL')
-                        logging.info('>',t,f)
+                        logging.info(f'> {t}, {f}')
         if auri:
             asyncio.run(self.go_download(auri))
 
