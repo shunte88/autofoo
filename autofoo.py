@@ -46,19 +46,12 @@ def go_show(title):
     return sanshow in tvshows_
 
 basesrl = 'https://scene-rls.net/releases/index.php?'
-#srls = {'first':'href=\"(https?:\/\/scene-rls\\.net\/[^\"]+)\"\\s+title','links':'"href=\"(https?://(www\\.)?(nitro\\.download|nitroflare\\.com)/view/[\\w]+/[^\"]+)"'}
+
 urls = [
     {'source':'https://rapidmoviez.cr/feed/s','type':'RSS'},
-    {'source':'https://rapidmoviez.cr/feed/m','type':'RSS'}
+    {'source':'https://rapidmoviez.cr/feed/m','type':'RSS'},
+    {'source':'feed.xml','type':'FILE'},
 ]
-"""
-    {'source': f"{basesrl}cat=TV%20Shows&p=1",'type':'URL','regex':srls},
-    {'source': f"{basesrl}cat=TV%20Shows&p=2",'type':'URL','regex':srls},
-    {'source': f"{basesrl}cat=TV%20Shows&p=3",'type':'URL','regex':srls},
-    {'source': f"{basesrl}cat=TV%20Shows&p=4",'type':'URL','regex':srls},
-    {'source': f"{basesrl}cat=TV%20Shows&p=5",'type':'URL','regex':srls},
-    {'source': f"{basesrl}cat=TV%20Shows&p=6",'type':'URL','regex':srls},
-"""
 
 delta = (datetime.now() - timedelta(hours=12)).replace(tzinfo=timezone.utc)
 process = []
@@ -69,6 +62,11 @@ for uri in urls:
     if uri['type'] == 'RSS':
         feed = feedparser.parse(url)
         entries = feed.entries
+    elif uri['type'] == 'FILE' and os.path.exists(url):
+        feed = feedparser.parse(url)
+        entries = feed.entries
+        # cleanup the feed.xml file
+        os.remove(url)
     else:
         try:
             logging.info(f"""{uri['type']}: {uri['regex']['first']}""")
@@ -82,11 +80,10 @@ for uri in urls:
     logging.info(f'Evaluating {len(feed.entries)} potential shows')
     for entry in entries:
         if '1080P' in entry.title.upper():
-            entry_date = datetime.strptime(entry.published, "%a, %d %b %Y %H:%M:%S %z")
+
             test = entry.title.upper().split('1080P')[0].strip().split(']')[-1].strip()
             test = sdx.sanitize_show(test)
-            """if entry_date >= delta \
-                and"""
+            print(test)
             if can_process(entry.title) \
                 and go_show(entry.title) \
                 and sdx.not_seen(test):
@@ -100,7 +97,7 @@ for show in sorted(process, \
     key=lambda x: datetime.strptime(x.published, "%a, %d %b %Y %H:%M:%S %z").timestamp()):
     nlx.append((sdx.load_page(show.link), show.test))
 
-#nlx.append((sdx.load_page('https://rapidmoviez.cr/release/severance-s02-1080p-10bit-webrip-6ch-x265-hevc-psa'), 'Severance.S02E00'))
+#nlx.append((sdx.load_page('https://rapidmoviez.cr/the-studio'), 'The.Studio.S01E00'))
 
 sdx.close()
 sdx.download_files(nlx)

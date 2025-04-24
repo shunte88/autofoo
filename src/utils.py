@@ -31,7 +31,7 @@ class SceneDownload:
     SPECIAL_CASES = {
         "USA", "FBI", "BBC", "CSI", "WILTY",
         "US", "AU", "PL", "IE", "NZ", "FR", "DE", "JP", "UK",
-        "QI", "XL",
+        "QI", "XL", "LOL",
         "WWII", "WPC",
         "VI", "VII", "VIII", "VIIII", "IX", "II", "III", "IV",
         "DCI", "HD", "W1A", "HBO", "100K",
@@ -90,12 +90,12 @@ class SceneDownload:
                 self.driver = None
             except:
                 pass
-        
+
     def set_params(self, **kwargs):
         self.download_dir = kwargs.get('download_dir', self.download_dir)
         self.uxs = kwargs.get('uxs', self.uxs)
         self.pxs = kwargs.get('pxs', self.pxs)
-        
+
     # Load garbage words from file
     def load_scene_tags(self, filepath='/data/tvtitle_munge.txt'):
         """
@@ -149,6 +149,7 @@ class SceneDownload:
             test = link.upper()
             keys = ('.MP4', '.MKV', '.MOV', '.MPG', '.WEBM')
             return any(key in test for key in keys)
+
         self.driver.get(url)
         try:
             # Wait for the specific HTML structure to render
@@ -159,6 +160,7 @@ class SceneDownload:
             # Extract the Nitroflare links from the <pre> tag
             links = self.driver.find_element(By.XPATH, '//h4[@class="links" and contains(text(), "NitroFlare:")]/following-sibling::pre[@class="links"]')
             links = links.text.strip().split("\n")
+            print(links)
             links = [link for link in links if good(link)]
 
             return links
@@ -172,16 +174,17 @@ class SceneDownload:
         Extracts the correct folder and filename from a messy TV episode 
         filename while filtering out scene rippers.
         """
-        
+
+        fn = filename.replace('_', '.').replace('-', '.').replace(' ', '.')
         # Extract show name and season/episode
-        match = re.search(self.season_episode_regex, filename, re.IGNORECASE)
+        match = re.search(self.season_episode_regex, fn, re.IGNORECASE)
         if not match:
             return None, None  # No valid show structure found
-        
+
         show_raw, season_episode = match.groups()
 
         # Find episode title, stopping at first garbage word
-        title_match = re.search(self.season_episode_title_regex, filename, re.IGNORECASE)
+        title_match = re.search(self.season_episode_title_regex, fn, re.IGNORECASE)
         episode_title_raw = title_match.group(1) if title_match else ""
 
         # Stop at the first garbage word
@@ -222,7 +225,7 @@ class SceneDownload:
         else:
             clean_filename = f"{folder}{episode_title}.{extension}"
 
-        clean_filename = clean_filename.replace('..','.')
+        clean_filename = clean_filename.replace('..','.').replace('..','.')
         return folder, clean_filename
 
     def seen_shows(self):
@@ -237,7 +240,7 @@ class SceneDownload:
         except:
             pass
         return test
-    
+
     def add_seen_show(self, data):
         test = self.sanitize_show(data)
         if not(test in self.seen_files):
@@ -245,7 +248,7 @@ class SceneDownload:
             self.modified_seen_shows = True
 
     def write_seen_entry(self, data):
-        test = self.sanitize_show(data)    
+        test = self.sanitize_show(data)
         with open(self.seen_file, 'a') as f:
             f.write(f"\n{test}")
         self.add_seen_show(test)
@@ -319,7 +322,7 @@ class SceneDownload:
         options = webdriver.ChromeOptions()
         options.add_argument("--start-minimized")
         options.add_argument("--headless")
-        #options.add_argument("--start-maximized")
+        options.add_argument("--start-maximized")
         options.add_argument("--no-sandbox")
         options.add_argument("--disable-dev-shm-usage")
         options.add_argument("--ignore-certificate-errors")
