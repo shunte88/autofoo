@@ -3,8 +3,10 @@ chrome_profile
 *.txt
 __pycache__
 .venv
+.vscode
 logs
 bc*
 band*
 qd
 gr
+af

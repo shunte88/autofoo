@@ -27,12 +27,18 @@ sdx = SceneDownload(
     logging_verbose=True)
 tvshows_ = sdx.load_tvshows()
 
-def can_process(title):
+def can_process(title, splitstr='1080'):
     test = title.upper()
-    keys = ('AV1','HEVC','X265')
-    return ('1080P' in test and \
+    keys = ('AV1','HEVC','X265','H265')
+    return (splitstr in test and \
         'NF' in test and \
         any(key in test for key in keys))
+
+def isit(subs, inthis):
+    if subs in inthis:
+        return subs
+    else:
+        return None
 
 def go_show(title):
     # the title needs to be sanitized
@@ -79,25 +85,27 @@ for uri in urls:
     # further filter by shows of interest
     logging.info(f'Evaluating {len(feed.entries)} potential shows')
     for entry in entries:
-        if '1080P' in entry.title.upper():
+        splitstr = isit('1080',entry.title.upper())
+        if not splitstr:
+            splitstr = isit('2160',entry.title.upper())
+        if not splitstr:
+            continue
 
-            test = entry.title.upper().split('1080P')[0].strip().split(']')[-1].strip()
-            test = sdx.sanitize_show(test)
-            print(test)
-            if can_process(entry.title) \
-                and go_show(entry.title) \
-                and sdx.not_seen(test):
-                sdx.add_seen_show(test) # no repeat downloads!!!!
-                entry['test'] = test
-                logging.info(f'Adding {test} for further processing...')
-                process.append(entry)
+        test = entry.title.upper().split(splitstr)[0].strip().split(']')[-1].strip()
+        test = sdx.sanitize_show(test)
+        print(f"<test> {test}")
+        if can_process(entry.title, splitstr) \
+            and go_show(entry.title) \
+            and sdx.not_seen(test):
+            sdx.add_seen_show(test) # no repeat downloads!!!!
+            entry['test'] = test
+            logging.info(f'Adding {test} for further processing...')
+            process.append(entry)
 
 nlx = []
 for show in sorted(process, \
     key=lambda x: datetime.strptime(x.published, "%a, %d %b %Y %H:%M:%S %z").timestamp()):
     nlx.append((sdx.load_page(show.link), show.test))
-
-#nlx.append((sdx.load_page('https://rapidmoviez.cr/the-studio'), 'The.Studio.S01E00'))
 
 sdx.close()
 sdx.download_files(nlx)

@@ -1,4 +1,8 @@
 source  /home/stuart/.config/postinsta
 cd /data2/autofoo
 source .venv/bin/activate
+PAGES="https://rapidmoviez.cr/feature/x265"
+for i in {2..31}; do PAGES="$PAGES,https://rapidmoviez.cr/feature/x265/b/$i"; done
+
+./gr $PAGES
 python3 autofoo.py

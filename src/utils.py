@@ -32,7 +32,7 @@ class SceneDownload:
         "USA", "FBI", "BBC", "CSI", "WILTY",
         "US", "AU", "PL", "IE", "NZ", "FR", "DE", "JP", "UK",
         "QI", "XL", "LOL",
-        "WWII", "WPC",
+        "WWII", "WPC","TV",
         "VI", "VII", "VIII", "VIIII", "IX", "II", "III", "IV",
         "DCI", "HD", "W1A", "HBO", "100K",
     }
@@ -116,12 +116,6 @@ class SceneDownload:
         response = self.session.get(url)
         print(response.content)
         return {}
-        # Extract href attributes containing "1080p"
-        for link in links:
-            href = link.get_attribute('href')
-            if href and "1080p" in href:
-                print(href)
-        return links
 
     def ensure_log_dir(self):
         if not os.path.exists(self.log_dir):
@@ -160,7 +154,7 @@ class SceneDownload:
             # Extract the Nitroflare links from the <pre> tag
             links = self.driver.find_element(By.XPATH, '//h4[@class="links" and contains(text(), "NitroFlare:")]/following-sibling::pre[@class="links"]')
             links = links.text.strip().split("\n")
-            print(links)
+            # print(links)
             links = [link for link in links if good(link)]
 
             return links
@@ -372,6 +366,12 @@ class SceneDownload:
             logging.critical(f"Failed to initialize browser: {str(e)}")
             sys.exit(1)
 
+    def isit(self, subs, inthis):
+        if subs in inthis:
+            return subs
+        else:
+            return None
+
     def download_files(self, files):
 
         auri = []
@@ -394,10 +394,14 @@ class SceneDownload:
                                     response = requests.get(url=self.NTFURL_DOWNLOADLINK, params=params)
                                     if response.status_code == 200:
                                         j = response.json()
-                                        if '1080' in j["result"]["name"]:
-                                            splitstr = '1080'
-                                        elif '720' in j["result"]["name"]:
-                                            splitstr = '720'
+                                        print(j)
+                                        splitstr = self.isit('1080',j["result"]["name"])
+                                        if not splitstr:
+                                            splitstr = self.isit('2160',j["result"]["name"])
+                                        if not splitstr:
+                                            splitstr = self.isit('720',j["result"]["name"])
+                                        if not splitstr:
+                                            continue
                                         test = f'''{j["result"]["name"].split(splitstr)[0].strip()}{j["result"]["name"].split('.')[-1]}'''
                                         _, show_filename = self.clean_filename(test)
                                         auri.append((
