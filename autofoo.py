@@ -54,8 +54,8 @@ def go_show(title):
 basesrl = 'https://scene-rls.net/releases/index.php?'
 
 urls = [
-    {'source':'https://rapidmoviez.cr/feed/s','type':'RSS'},
-    {'source':'https://rapidmoviez.cr/feed/m','type':'RSS'},
+    {'source':'https://rapidmoviez.com/feed/s','type':'RSS'},
+    {'source':'https://rapidmoviez.com/feed/m','type':'RSS'},
     {'source':'feed.xml','type':'FILE'},
 ]
 
