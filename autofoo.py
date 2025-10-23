@@ -109,4 +109,4 @@ for show in sorted(process, \
 
 sdx.close()
 sdx.download_files(nlx)
-sdx._view_db()
+#sdx._view_db()
