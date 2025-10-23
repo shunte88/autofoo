@@ -18,10 +18,12 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from fake_useragent import UserAgent
 
+import plyvel
 
 class SceneDownload:
 
     # Constants
+    DB_PATH = "./cache/"
     NTFURL_API = "https://nitroflare.com/api/v2"
     NTFURL_KEYINFO = f"{NTFURL_API}/getKeyInfo"
     NTFURL_FILEINFO = f"{NTFURL_API}/getFileInfo"
@@ -44,14 +46,13 @@ class SceneDownload:
         self.season_episode_regex = r"(.*?)(S\d{2,3}E\d{2})"
         self.season_episode_title_regex = r"s\d{2,3}e\d{2}\.(.*)"
         self.driver = None
-        self.seen_files = []
+        self.seen_db = plyvel.DB(self.DB_PATH, create_if_missing=True) 
         self.tvshows_ = []
-        self.modified_seen_shows = False
         self.chromeProfilePath = os.path.join(os.getcwd(), "chrome_profile", "scene_profile")
         sys.path.append(self.chromeProfilePath)
         self.profile_dir = os.path.basename(self.chromeProfilePath)
         sys.path.append(self.profile_dir)
-        self.seen_file = os.path.join(os.getcwd(),'.cache','seen_files')
+        #self.seen_file = os.path.join(os.getcwd(),'.','seen_files_load')
         self.log_dir = os.path.join(os.getcwd(), "logs")
         self.download_dir = kwargs.get('download_dir', None)
         self.uxs = kwargs.get('uxs', None)
@@ -59,8 +60,33 @@ class SceneDownload:
         self.logging_verbose = kwargs.get('logging_verbose', False)
         self.scene_tags = []
         self._init_logging()
-        self.load_seen_files()
+        #self._run_once()
         self.init_browser(self.chrome_browser_options())
+
+    def _view_db(self):
+        print("\n--- Verifying Seen Data ---")
+        for key, value in self.seen_db:
+            print(f"Key: {key.decode('utf-8')}, Value: {value.decode('utf-8')}")
+            
+    def _run_once(self):
+        return
+        tmp_file = self.seen_file + '.tmp'
+        with open(self.seen_file, 'r', encoding='utf-8') as fin:
+            with open(tmp_file, 'w', encoding='utf-8') as fout:
+                for line in fin:
+                    key = line.strip().encode('utf-8')
+                    # stage unknown key
+                    if self.seen_db.get(key) is None:
+                        fout.write(line)
+        with open(tmp_file, 'r', encoding='utf-8') as f:
+            # Use a batch to perform multiple writes efficiently
+            with self.seen_db.write_batch() as wb:
+                for line in f:
+                    key = line.strip().encode('utf-8')
+                    # prime
+                    now = datetime.now()
+                    value = now.strftime("%Y-%m-%d %H:%M:%S").encode('utf-8')
+                    self.seen_db.put(key, value)
 
     def _init_logging(self, **kwargs):
         self.ensure_log_dir()
@@ -222,9 +248,6 @@ class SceneDownload:
         clean_filename = clean_filename.replace('..','.').replace('..','.')
         return folder, clean_filename
 
-    def seen_shows(self):
-        return self.seen_files
-
     def sanitize_show(self, data):
         test = data.strip().replace(' ','.').upper()
         try:
@@ -235,27 +258,12 @@ class SceneDownload:
             pass
         return test
 
-    def add_seen_show(self, data):
-        test = self.sanitize_show(data)
-        if not(test in self.seen_files):
-            self.seen_files.append(test)
-            self.modified_seen_shows = True
-
     def write_seen_entry(self, data):
-        test = self.sanitize_show(data)
-        with open(self.seen_file, 'a') as f:
-            f.write(f"\n{test}")
-        self.add_seen_show(test)
-
-    def rebuild_seen_shows(self):
-        #if modified_seen_shows:
-        try:
-            self.seen_files = sorted(self.seen_files)
-            result = "\n".join(self.seen_files)
-            with open(self.seen_file, 'w') as f:
-                f.write(result)
-        except Exception as e:
-            logging.error(f'err : {e}')
+        test = self.sanitize_show(data).strip().encode('utf-8')
+        if self.seen_db.get(test) is None:
+            now = datetime.now()
+            value = now.strftime("%Y-%m-%d %H:%M:%S").encode('utf-8')
+            self.seen_db.put(test, value)
 
     async def download_file(self, url, filepath, title=None):
         async with aiohttp.ClientSession() as session:
@@ -282,24 +290,9 @@ class SceneDownload:
         tasks = [self.download_file(url, name, title) for url, name, title in auri]
         await asyncio.gather(*tasks)
 
-    def ensure_seen_file(self):
-        _dir = os.path.dirname(self.seen_file)
-        if not os.path.exists(_dir):
-            os.makedirs(_dir)
-        if not os.path.exists(self.seen_file):
-            Path(self.seen_file).touch()
-        return self.seen_file
-
-    def load_seen_files(self):
-        logging.info('Loading seen files')
-        with open(self.ensure_seen_file(), 'r') as f:
-            self.seen_files = sorted(
-                set(self.sanitize_show(line) for line \
-                    in f if len(line.strip())>0 and line[0] != '#')
-            )
-
     def not_seen(self, test):
-        return not test in self.seen_shows()
+        test = self.sanitize_show(test).strip().encode('utf-8')
+        return (self.seen_db.get(test) is None)
 
     def nf_premium(self) -> dict:
         return {"user": self.uxs, "premiumKey": self.pxs}

@@ -87,7 +87,7 @@ for uri in urls:
     for entry in entries:
         splitstr = isit('1080',entry.title.upper())
         if not splitstr:
-            splitstr = isit('2160',entry.title.upper())
+            splitstr = isit('2160zzz',entry.title.upper())
         if not splitstr:
             continue
 
@@ -109,4 +109,4 @@ for show in sorted(process, \
 
 sdx.close()
 sdx.download_files(nlx)
-sdx.rebuild_seen_shows()
+sdx._view_db()
