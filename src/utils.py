@@ -258,6 +258,9 @@ class SceneDownload:
             pass
         return test
 
+    def add_seen_show(self, data):
+        self.write_seen_entry(data)
+
     def write_seen_entry(self, data):
         test = self.sanitize_show(data).strip().encode('utf-8')
         if self.seen_db.get(test) is None:
